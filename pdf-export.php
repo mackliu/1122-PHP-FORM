@@ -7,7 +7,7 @@ use Dompdf\Options;
 include "db_export.php";
 
 $options = new Options();
-$options->set('defaultFont', './fonts/DFBangShuStd-W8.otf'); // 設置默認字體，可以根據需要更改
+$options->set('defaultFont', 'GJGL'); // 設置默認字體，可以根據需要更改
 $dompdf = new Dompdf($options);
 
 
@@ -16,6 +16,21 @@ $rows=all("20200706"," where  `投票所編號` in ('".join("','",$_POST['select
 
 //$filename=date("Ymd").rand(100000000,999999999);
 $filename=date("Ymd").rand(100000000,999999999).".pdf";
+
+
+
+// 圖片路徑
+$imagePath = './icon/wda.png'; // 將 "path_to_your_image.png" 替換為你的圖片路徑
+
+// 讀取圖片
+$imageData = file_get_contents($imagePath);
+
+// 將圖片轉換為 BASE64 字符串
+$base64Image = base64_encode($imageData);
+
+// 將 BASE64 字符串嵌入到 Data URI 中
+$dataUri = 'data:image/png;base64,' . $base64Image;
+
 //$file=fopen("./doc/{$filename}.csv",'w+');
 //fwrite($file, "\xEF\xBB\xBF");
 $html="<!DOCTYPE html>
@@ -24,8 +39,30 @@ $html="<!DOCTYPE html>
     <meta charset='UTF-8'>
     <meta name='viewport' content='width=device-width, initial-scale=1.0'>
     <title>Document</title>
+    <style>
+        table{
+            border-collapse:collapse;
+            padding:2px;
+            border:1px solid #999;
+            font-size:12px;
+        }
+        td{
+            border:1px solid #666;
+            padding:5px;
+        }
+        tr:nth-child(odd){
+            background:lightgreen;
+        }
+        tr:nth-child(1){
+            background:black;
+            color:white;
+            font-weight:bold;
+        }
+    </style>
 </head>
-<body>";
+<body>
+<img src='{$dataUri}' style='width:150px;height:150px'>
+";
     
 $html .="<table>";
 $chk=false;
@@ -33,10 +70,16 @@ foreach($rows as $row){
     if(!$chk){
         $cols=array_keys($row);
         $html .="<tr>";
-        foreach($cols as $col){
+        foreach($cols as $idx => $col){
+
             $html .="<td>";
             $html .=$col;
             $html .="</td>";
+            if($idx==7){
+
+                $html .="</tr>";
+                $html .="<tr>";
+            }
         }
         $html .="</tr>";
         $chk=true;
@@ -44,10 +87,15 @@ foreach($rows as $row){
 
     //fwrite($file,join(",",$row)."\r\n");
     $html .="<tr>";
-    foreach($row as $r){
+    foreach($row as $i => $r){
         $html .="<td>";
         $html .=$r;
         $html .="</td>";
+        if($i=='候選人3票數'){
+
+            $html .="</tr>";
+            $html .="<tr>";
+        }
     }
     $html .="</tr>";
 }
@@ -59,11 +107,14 @@ $html .="</table></body>
 // 將 HTML 載入 Dompdf
 $dompdf->loadHtml($html);
 
+// 設置紙張方向為橫式
+$dompdf->setPaper('A4', 'landscape'); 
+
 // 渲染 PDF（可選）
 $dompdf->render();
 
 // 將 PDF 輸出到文件或直接輸出到瀏覽器
-$dompdf->stream("./doc/{$filename}", array('Attachment' => 0));
+$dompdf->stream("./doc/{$filename}", array('Attachment' => 1));
 //fclose($file);
 
 echo "<a href='./doc/{$filename}'  download>檔案已匯出，請點此連結下載</a>";
@@ -88,6 +139,7 @@ echo "<a href='./doc/{$filename}'  download>檔案已匯出，請點此連結下
     }
 </style>
 <script src="./jquery-3.4.1.min.js"></script>
+
 <form action="?" method="post">
     <input type="submit" value="匯出選擇的資料">
 <table>
